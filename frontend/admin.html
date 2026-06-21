@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel Admin - Bandera Commerce</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    .admin-section { display: none; }
+    .admin-section.active { display: block; }
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal-content {
+      background: white;
+      border-radius: 16px;
+      width: 90%;
+      max-width: 800px;
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 2rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <i class="fas fa-tattoo logo-icon"></i>
+      <h1>Bandera Commerce - Admin</h1>
+    </div>
+    <nav>
+      <a href="#" onclick="mostrarSeccion('dashboard')"><i class="fas fa-chart-line"></i> Dashboard</a>
+      <a href="#" onclick="mostrarSeccion('orders')"><i class="fas fa-shopping-bag"></i> Pedidos</a>
+      <a href="#" onclick="mostrarSeccion('products')"><i class="fas fa-box"></i> Productos</a>
+      <a href="#" onclick="mostrarSeccion('categories')"><i class="fas fa-tags"></i> Categorías</a>
+      <a href="/" onclick="cerrarSesionAdmin()"><i class="fas fa-sign-out-alt"></i> Salir</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="admin-header">
+      <h2>Panel de Administración</h2>
+      <div id="adminMessage" class="message" style="display: none;"></div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div id="dashboard" class="admin-section active">
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card">📊 Cargando...</div>
+      </div>
+    </div>
+
+    <!-- PEDIDOS -->
+    <div id="orders" class="admin-section">
+      <div class="stats-overview" id="ordersStats"></div>
+      
+      <div style="display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap;">
+        <select id="filterPayment" class="form-control" style="width: auto;" onchange="filtrarPedidos()">
+          <option value="all">Todos los pagos</option>
+          <option value="pendiente">Pendiente</option>
+          <option value="pagado">Pagado</option>
+          <option value="cancelado">Cancelado</option>
+        </select>
+        <select id="filterShipping" class="form-control" style="width: auto;" onchange="filtrarPedidos()">
+          <option value="all">Todos los envíos</option>
+          <option value="pendiente">Pendiente</option>
+          <option value="enviado">Enviado</option>
+          <option value="entregado">Entregado</option>
+        </select>
+        <input type="text" id="searchOrders" class="form-control" placeholder="Buscar..." style="width: 200px;" onkeyup="filtrarPedidos()">
+        <button class="btn btn-secondary" onclick="cargarPedidos()"><i class="fas fa-redo"></i> Actualizar</button>
+      </div>
+      
+      <div id="ordersList"></div>
+    </div>
+
+    <!-- PRODUCTOS -->
+    <div id="products" class="admin-section">
+      <button class="btn btn-success" onclick="document.getElementById('productForm').style.display='block'" style="margin-bottom: 1rem;">
+        <i class="fas fa-plus"></i> Nuevo Producto
+      </button>
+      
+      <div id="productForm" style="display: none;" class="form-container">
+        <h3>Nuevo Producto</h3>
+        <div class="form-group">
+          <label>Nombre *</label>
+          <input type="text" id="prodName" class="form-control">
+        </div>
+        <div class="form-group">
+          <label>Descripción</label>
+          <textarea id="prodDesc" class="form-control"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Precio *</label>
+          <input type="number" id="prodPrice" class="form-control" step="0.01">
+        </div>
+        <div class="form-group">
+          <label>Categoría *</label>
+          <select id="prodCategory" class="form-control"></select>
+        </div>
+        <div class="form-group">
+          <label>URL Imagen</label>
+          <input type="text" id="prodImage" class="form-control" placeholder="https://...">
+        </div>
+        <button class="btn btn-primary" onclick="crearProducto()">Guardar</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('productForm').style.display='none'">Cancelar</button>
+      </div>
+      
+      <div class="products-grid" id="adminProducts"></div>
+    </div>
+
+    <!-- CATEGORÍAS -->
+    <div id="categories" class="admin-section">
+      <div class="form-container">
+        <h3>Nueva Categoría</h3>
+        <div class="form-group">
+          <label>Nombre interno *</label>
+          <input type="text" id="catName" class="form-control" placeholder="ej: tatuaje">
+        </div>
+        <div class="form-group">
+          <label>Nombre para mostrar *</label>
+          <input type="text" id="catDisplay" class="form-control" placeholder="🎨 Tatuaje">
+        </div>
+        <button class="btn btn-primary" onclick="crearCategoria()">Crear Categoría</button>
+      </div>
+      
+      <div class="categories-list" id="adminCategories"></div>
+    </div>
+  </main>
+
+  <!-- Modal de detalles del pedido -->
+  <div id="orderModal" class="modal">
+    <div class="modal-content" id="orderDetails"></div>
+  </div>
+
+  <footer>
+    <p>© 2024 Bandera Commerce - Panel Administrativo</p>
+  </footer>
+
+  <script>
+    const API_URL = 'http://localhost:3000/api';
+    const ADMIN_TOKEN = 'LavadoraDeSamuel123#';
+    let allOrders = [];
+    let currentOrder = null;
+
+    // Verificar autenticación
+    const token = localStorage.getItem('admin_token');
+    if (!token || token !== ADMIN_TOKEN) {
+      window.location.href = '/admin-login';
+    }
+
+    // Mostrar sección
+    function mostrarSeccion(seccion) {
+      document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
+      document.getElementById(seccion).classList.add('active');
+      
+      if (seccion === 'dashboard') cargarStats();
+      if (seccion === 'orders') cargarPedidos();
+      if (seccion === 'products') cargarProductosAdmin();
+      if (seccion === 'categories') cargarCategoriasAdmin();
+    }
+
+    // ========== STATS ==========
+    async function cargarStats() {
+      try {
+        const res = await fetch(`${API_URL}/stats`, {
+          headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+          const s = data.stats;
+          document.getElementById('statsGrid').innerHTML = `
+            <div class="stat-card"><div class="stat-number">${s.totalProducts}</div><div class="stat-label">Productos</div></div>
+            <div class="stat-card"><div class="stat-number">${s.totalOrders}</div><div class="stat-label">Pedidos</div></div>
+            <div class="stat-card"><div class="stat-number">${s.totalUsers}</div><div class="stat-label">Usuarios</div></div>
+            <div class="stat-card"><div class="stat-number">${s.totalSales.toFixed(2)}€</div><div class="stat-label">Ventas</div></div>
+            <div class="stat-card"><div class="stat-number">${s.pendingOrders}</div><div class="stat-label">Pendientes</div></div>
+          `;
+        }
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    }
+
+    // ========== PEDIDOS ==========
+    async function cargarPedidos() {
+      try {
+        const res = await fetch(`${API_URL}/orders`, {
+          headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+          allOrders = data.orders;
+          filtrarPedidos();
+        }
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    }
+
+    function filtrarPedidos() {
+      const payment = document.getElementById('filterPayment').value;
+      const shipping = document.getElementById('filterShipping').value;
+      const search = document.getElementById('searchOrders').value.toLowerCase();
+      
+      let filtered = allOrders.filter(o => {
+        if (payment !== 'all' && o.payment_status !== payment) return false;
+        if (shipping !== 'all' && o.shipping_status !== shipping) return false;
+        if (search && !o.order_number.toLowerCase().includes(search) && !o.user_name.toLowerCase().includes(search)) return false;
+        return true;
+      });
+      
+      mostrarPedidos(filtered);
+    }
+
+    function mostrarPedidos(orders) {
+      const container = document.getElementById('ordersList');
+      
+      if (orders.length === 0) {
+        container.innerHTML = `<div class="no-data">No hay pedidos</div>`;
+        return;
+      }
+      
+      container.innerHTML = `
+        <table class="data-table">
+          <thead><tr><th>N° Pedido</th><th>Cliente</th><th>Total</th><th>Pago</th><th>Envío</th><th>Fecha</th><th>Acciones</th></tr></thead>
+          <tbody>
+            ${orders.map(o => `
+              <tr>
+                <td><strong>${o.order_number}</strong></td>
+                <td>${o.user_name}<br><small>${o.user_email}</small></td>
+                <td><strong>${o.total.toFixed(2)}€</strong></td>
+                <td><span class="status-badge status-${o.payment_status}">${o.payment_status}</span></td>
+                <td><span class="status-badge status-${o.shipping_status}">${o.shipping_status}</span></td>
+                <td>${new Date(o.created_at).toLocaleDateString()}</td>
+                <td>
+                  <button class="btn btn-secondary" style="padding: 0.5rem;" onclick="verPedido(${o.id})"><i class="fas fa-eye"></i></button>
+                  <button class="btn btn-danger" style="padding: 0.5rem;" onclick="eliminarPedido(${o.id}, '${o.order_number}')"><i class="fas fa-trash"></i></button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    async function verPedido(id) {
+      try {
+        const res = await fetch(`${API_URL}/orders/${id}`, {
+          headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+          currentOrder = data.order;
+          mostrarModalPedido();
+        }
+      } catch (error) {
+        mostrarNotificacion('Error cargando pedido', 'error');
+      }
+    }
+
+    function mostrarModalPedido() {
+      const o = currentOrder;
+      
+      document.getElementById('orderDetails').innerHTML = `
+        <h3>Pedido ${o.order_number}</h3>
+        <button onclick="document.getElementById('orderModal').style.display='none'" style="float: right; background: none; border: none; font-size: 1.5rem;">&times;</button>
+        
+        <div style="margin-top: 1rem;">
+          <h4>Cliente</h4>
+          <p><strong>${o.user_name}</strong><br>${o.user_email}<br>${o.user_phone || ''}<br>${o.user_company || ''}</p>
+          
+          <h4>Dirección de envío</h4>
+          <p>${o.shipping_address}</p>
+          
+          <h4>Productos</h4>
+          <table class="data-table">
+            <thead><tr><th>Producto</th><th>Cantidad</th><th>Precio</th><th>Total</th></tr></thead>
+            <tbody>
+              ${o.products.map(p => `
+                <tr><td>${p.name}</td><td>${p.quantity}</td><td>${p.price.toFixed(2)}€</td><td>${(p.price * p.quantity).toFixed(2)}€</td></tr>
+              `).join('')}
+            </tbody>
+          </table>
+          
+          <div style="text-align: right; margin-top: 1rem;">
+            <p>Subtotal: ${o.subtotal.toFixed(2)}€</p>
+            <p>Envío: ${o.shipping.toFixed(2)}€</p>
+            <h3>Total: ${o.total.toFixed(2)}€</h3>
+          </div>
+          
+          <div style="margin-top: 2rem;">
+            <h4>Actualizar Estados</h4>
+            <div style="display: flex; gap: 1rem;">
+              <select id="newPaymentStatus" class="form-control" style="width: auto;">
+                <option value="pendiente" ${o.payment_status === 'pendiente' ? 'selected' : ''}>Pendiente</option>
+                <option value="pagado" ${o.payment_status === 'pagado' ? 'selected' : ''}>Pagado</option>
+                <option value="cancelado" ${o.payment_status === 'cancelado' ? 'selected' : ''}>Cancelado</option>
+              </select>
+              <select id="newShippingStatus" class="form-control" style="width: auto;">
+                <option value="pendiente" ${o.shipping_status === 'pendiente' ? 'selected' : ''}>Pendiente</option>
+                <option value="enviado" ${o.shipping_status === 'enviado' ? 'selected' : ''}>Enviado</option>
+                <option value="entregado" ${o.shipping_status === 'entregado' ? 'selected' : ''}>Entregado</option>
+              </select>
+              <button class="btn btn-primary" onclick="actualizarEstadoPedido()">Actualizar</button>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      document.getElementById('orderModal').style.display = 'flex';
+    }
+
+    async function actualizarEstadoPedido() {
+      const payment = document.getElementById('newPaymentStatus').value;
+      const shipping = document.getElementById('newShippingStatus').value;
+      
+      try {
+        const res = await fetch(`${API_URL}/orders/${currentOrder.id}/status`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${ADMIN_TOKEN}`
+          },
+          body: JSON.stringify({ payment_status: payment, shipping_status: shipping })
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+          mostrarNotificacion('Estado actualizado', 'success');
+          document.getElementById('orderModal').style.display = 'none';
+          cargarPedidos();
+        }
+      } catch (error) {
+        mostrarNotificacion('Error actualizando', 'error');
+      }
+    }
+
+    async function eliminarPedido(id, numero) {
+      if (!confirm(`¿Eliminar pedido ${numero}? Esta acción es irreversible.`)) return;
+      
+      try {
+        const res = await fetch(`${API_URL}/orders/${id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+          mostrarNotificacion('Pedido eliminado', 'success');
+          cargarPedidos();
+        }
+      } catch (error) {
+        mostrarNotificacion('Error eliminando', 'error');
+      }
+    }
+
+    // ========== PRODUCTOS ==========
+    async function cargarProductosAdmin() {
+      try {
+        const res = await fetch(`${API_URL}/products`);
+        const data = await res.json();
+        
+        if (data.success) {
+          const container = document.getElementById('adminProducts');
+          container.innerHTML = data.products.map(p => `
+            <div class="product-card">
+              <img src="${p.image || 'https://placehold.co/400x300'}" class="product-image" onerror="this.src='https://placehold.co/400x300'">
+              <div class="product-info">
+                <h3>${p.name}</h3>
+                <div class="product-price">${p.price.toFixed(2)}€</div>
+                <div class="product-category">${p.category}</div>
+              </div>
+              <div class="product-actions">
+                <button class="btn btn-danger" onclick="eliminarProducto(${p.id}, '${p.name}')">Eliminar</button>
+              </div>
+            </div>
+          `).join('');
+          
+          // Cargar categorías para el select
+          const catRes = await fetch(`${API_URL}/categories`);
+          const catData = await catRes.json();
+          if (catData.success) {
+            const select = document.getElementById('prodCategory');
+            select.innerHTML = catData.categories.map(c => `<option value="${c.name}">${c.display_name}</option>`).join('');
+          }
+        }
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    }
+
+    async function crearProducto() {
+      const name = document.getElementById('prodName').value;
+      const description = document.getElementById('prodDesc').value;
+      const price = parseFloat(document.getElementById('prodPrice').value);
+      const category = document.getElementById('prodCategory').value;
+      const image = document.getElementById('prodImage').value;
+      
+      if (!name || !price || !category) {
+        mostrarNotificacion('Completa los campos obligatorios', 'error');
+        return;
+      }
+      
+      try {
+        const res = await fetch(`${API_URL}/products`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${ADMIN_TOKEN}`
+          },
+          body: JSON.stringify({ name, description, price, category, image })
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+          mostrarNotificacion('Producto creado', 'success');
+          document.getElementById('productForm').style.display = 'none';
+          document.getElementById('prodName').value = '';
+          document.getElementById('prodDesc').value = '';
+          document.getElementById('prodPrice').value = '';
+          document.getElementById('prodImage').value = '';
+          cargarProductosAdmin();
+        } else {
+          mostrarNotificacion(data.error || 'Error', 'error');
+        }
+      } catch (error) {
+        mostrarNotificacion('Error de conexión', 'error');
+      }
+    }
+
+    async function eliminarProducto(id, nombre) {
+      if (!confirm(`¿Eliminar "${nombre}"?`)) return;
+      
+      try {
+        const res = await fetch(`${API_URL}/products/${id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+          mostrarNotificacion('Producto eliminado', 'success');
+          cargarProductosAdmin();
+        }
+      } catch (error) {
+        mostrarNotificacion('Error eliminando', 'error');
+      }
+    }
+
+    // ========== CATEGORÍAS ==========
+    async function cargarCategoriasAdmin() {
+      try {
+        const res = await fetch(`${API_URL}/categories`);
+        const data = await res.json();
+        
+        if (data.success) {
+          const container = document.getElementById('adminCategories');
+          container.innerHTML = data.categories.map(c => `
+            <div class="category-item" style="background: white; padding: 1rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <strong>${c.display_name}</strong><br>
+                <small>${c.name}</small>
+              </div>
+              <button class="btn btn-danger" onclick="eliminarCategoria(${c.id}, '${c.name}')">Eliminar</button>
+            </div>
+          `).join('');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    }
+
+    async function crearCategoria() {
+      const name = document.getElementById('catName').value.toLowerCase();
+      const display_name = document.getElementById('catDisplay').value;
+      
+      if (!name || !display_name) {
+        mostrarNotificacion('Completa los campos', 'error');
+        return;
+      }
+      
+      try {
+        const res = await fetch(`${API_URL}/categories`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${ADMIN_TOKEN}`
+          },
+          body: JSON.stringify({ name, display_name })
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+          mostrarNotificacion('Categoría creada', 'success');
+          document.getElementById('catName').value = '';
+          document.getElementById('catDisplay').value = '';
+          cargarCategoriasAdmin();
+          cargarProductosAdmin();
+        } else {
+          mostrarNotificacion(data.error || 'Error', 'error');
+        }
+      } catch (error) {
+        mostrarNotificacion('Error de conexión', 'error');
+      }
+    }
+
+    async function eliminarCategoria(id, nombre) {
+      if (!confirm(`¿Eliminar categoría "${nombre}"?`)) return;
+      
+      try {
+        const res = await fetch(`${API_URL}/categories/${id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+          mostrarNotificacion('Categoría eliminada', 'success');
+          cargarCategoriasAdmin();
+        } else {
+          mostrarNotificacion(data.error || 'Error', 'error');
+        }
+      } catch (error) {
+        mostrarNotificacion('Error eliminando', 'error');
+      }
+    }
+
+    // ========== NOTIFICACIONES ==========
+    function mostrarNotificacion(msg, tipo) {
+      const div = document.createElement('div');
+      div.className = `notification notification-${tipo}`;
+      div.innerHTML = `<i class="fas ${tipo === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> ${msg}`;
+      document.body.appendChild(div);
+      setTimeout(() => div.remove(), 3000);
+    }
+
+    function cerrarSesionAdmin() {
+      localStorage.removeItem('admin_token');
+    }
+
+    // Inicializar
+    mostrarSeccion('dashboard');
+  </script>
+</body>
+</html>
