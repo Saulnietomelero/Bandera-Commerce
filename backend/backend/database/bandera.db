@@ -1,0 +1,94 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "name": "Admin",
+      "email": "admin@bandera.com",
+      "password": "LavadoraDeSamuel123#",
+      "phone": "744755575",
+      "company": "Bandera",
+      "created_at": "2026-05-12T17:12:52.944Z"
+    },
+    {
+      "id": 2,
+      "name": "Juan Pérez",
+      "email": "juan@test.com",
+      "password": "123456",
+      "phone": "600000000",
+      "company": "Studio Ink",
+      "created_at": "2026-05-12T17:12:52.944Z"
+    },
+    {
+      "id": 3,
+      "name": "Saúl",
+      "email": "teamextremekingdom@gmail.com",
+      "password": "1234",
+      "phone": "608430029",
+      "company": "saul",
+      "created_at": "2026-05-12T17:19:19.514Z"
+    }
+  ],
+  "products": [
+    {
+      "id": 3,
+      "name": "Espuma Antiséptica",
+      "description": "Limpieza profunda",
+      "price": 24.99,
+      "category": "higiene",
+      "image": "https://images.unsplash.com/photo-1583947581924-860bda6a26df?w=400",
+      "created_at": "2026-05-12T17:12:52.944Z"
+    }
+  ],
+  "orders": [
+    {
+      "id": 1,
+      "order_number": "BC260512353",
+      "user_id": 3,
+      "user_name": "Saúl",
+      "user_email": "teamextremekingdom@gmail.com",
+      "user_phone": "608430029",
+      "user_company": "saul",
+      "products": [
+        {
+          "id": 3,
+          "name": "Espuma Antiséptica",
+          "price": 24.99,
+          "image": "https://images.unsplash.com/photo-1583947581924-860bda6a26df?w=400",
+          "quantity": 1
+        }
+      ],
+      "subtotal": 24.99,
+      "shipping": 5.99,
+      "total": 30.979999999999997,
+      "shipping_address": "aszd",
+      "payment_method": "efectivo",
+      "payment_status": "pendiente",
+      "shipping_status": "pendiente",
+      "notes": "",
+      "created_at": "2026-05-12T17:51:59.096Z",
+      "updated_at": "2026-05-12T17:52:44.493Z"
+    }
+  ],
+  "categories": [
+    {
+      "id": 1,
+      "name": "tatuaje",
+      "display_name": "🎨 Tatuaje"
+    },
+    {
+      "id": 2,
+      "name": "piercing",
+      "display_name": "📌 Piercing"
+    },
+    {
+      "id": 3,
+      "name": "higiene",
+      "display_name": "🧼 Higiene"
+    },
+    {
+      "id": 4,
+      "name": "accesorios",
+      "display_name": "🛠️ Accesorios"
+    }
+  ]
+}
