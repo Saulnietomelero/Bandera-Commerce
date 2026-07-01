@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carrito - Bandera Commerce</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <i class="fas fa-tattoo logo-icon"></i>
+      <h1>Bandera Commerce</h1>
+    </div>
+    <nav>
+      <a href="/"><i class="fas fa-home"></i> Inicio</a>
+      <a href="/productos"><i class="fas fa-box"></i> Productos</a>
+      <a href="/carrito"><i class="fas fa-shopping-cart"></i> Carrito <span class="cart-badge">0</span></a>
+      <div id="userInfo"></div>
+    </nav>
+  </header>
+
+  <main>
+    <div class="cart-container">
+      <h2><i class="fas fa-shopping-cart"></i> Tu Carrito</h2>
+      <div id="carritoItems"></div>
+    </div>
+  </main>
+
+  <footer>
+    <p>© 2024 Bandera Commerce - Todos los derechos reservados</p>
+    <p><i class="fas fa-envelope"></i> banderacommerce@gmail.com | <i class="fas fa-phone"></i> 744 755 575</p>
+  </footer>
+
+  <script src="/script.js"></script>
+</body>
+</html>
