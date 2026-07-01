@@ -30,6 +30,28 @@
       overflow-y: auto;
       padding: 2rem;
     }
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 1rem 1.5rem;
+      border-radius: 8px;
+      color: white;
+      z-index: 9999;
+      animation: slideIn 0.3s ease;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .notification-success { background: #28a745; }
+    .notification-error { background: #dc3545; }
+    .notification-info { background: #17a2b8; }
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes slideOut {
+      from { transform: translateX(0); opacity: 1; }
+      to { transform: translateX(100%); opacity: 0; }
+    }
   </style>
 </head>
 <body>
@@ -148,7 +170,10 @@
   </footer>
 
   <script>
-    const API_URL = 'http://localhost:3000/api';
+    // ========== CONFIGURACIÓN ==========
+    const API_URL = window.location.hostname === 'localhost' 
+      ? 'http://localhost:3000/api' 
+      : 'https://bandera-commerce.onrender.com/api';
     const ADMIN_TOKEN = 'LavadoraDeSamuel123#';
     let allOrders = [];
     let currentOrder = null;
@@ -551,11 +576,15 @@
       div.className = `notification notification-${tipo}`;
       div.innerHTML = `<i class="fas ${tipo === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> ${msg}`;
       document.body.appendChild(div);
-      setTimeout(() => div.remove(), 3000);
+      setTimeout(() => {
+        div.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => div.remove(), 300);
+      }, 3000);
     }
 
     function cerrarSesionAdmin() {
       localStorage.removeItem('admin_token');
+      window.location.href = '/';
     }
 
     // Inicializar
